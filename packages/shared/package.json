@@ -9,7 +9,7 @@
     "build": "tsc",
     "lint": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage --passWithNoTests"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"

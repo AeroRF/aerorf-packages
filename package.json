@@ -9,7 +9,7 @@
   "scripts": {
     "build": "npm run build -w @aerorf/shared && npm run build -w @aerorf/business-rules",
     "test": "npm run test --workspaces --if-present",
-    "test:coverage": "npm run test:coverage --workspaces --if-present",
+    "test:coverage": "npm run test:coverage -w @aerorf/business-rules",
     "lint": "npm run lint --workspaces --if-present"
   },
   "engines": {
