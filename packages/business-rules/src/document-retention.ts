@@ -20,3 +20,8 @@ export function formatStorageBytes(bytes: number): string {
   const value = bytes / 1024 ** i;
   return `${value >= 10 || i === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[i]}`;
 }
+
+/** Caminhões: documentos regulatórios são renovação periódica (vistoria, seguro, tacógrafo, licenciamento). */
+export function getTruckDocumentRetentionType(_tipo: string): DocumentRetentionType {
+  return 'periodic';
+}
