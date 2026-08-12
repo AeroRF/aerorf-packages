@@ -9,3 +9,4 @@ export * from './document-status';
 export * from './component-status';
 export * from './hour-log';
 export * from './transfer-access';
+export * from './empresa';

@@ -13,6 +13,7 @@ import {
   canInitiateAircraftTransfer,
   validateAircraftTransferTargets,
 } from './transfer-access';
+import { validateEmpresaInput, canDeleteEmpresa, generateExternalId } from './empresa';
 
 describe('permissions', () => {
   it('allows module when listed', () => {
@@ -155,5 +156,23 @@ describe('transfer-access', () => {
   it('rejects same origin and destination', () => {
     const r = validateAircraftTransferTargets('e1', 'e1');
     expect(r.valid).toBe(false);
+  });
+});
+
+describe('empresa', () => {
+  it('validates required fields', () => {
+    const r = validateEmpresaInput({ nome: '', nomeFantasia: '' });
+    expect(r.valid).toBe(false);
+    expect(r.errors.length).toBeGreaterThan(0);
+  });
+
+  it('blocks delete when units exist', () => {
+    expect(canDeleteEmpresa(2).allowed).toBe(false);
+    expect(canDeleteEmpresa(0).allowed).toBe(true);
+  });
+
+  it('generates external id by segment', () => {
+    const id = generateExternalId('Aviação agrícola', ['RF-AGR-0003']);
+    expect(id).toBe('RF-AGR-0004');
   });
 });
