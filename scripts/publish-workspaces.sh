@@ -2,7 +2,10 @@
 set -euo pipefail
 
 REGISTRY="${NPM_REGISTRY:-https://npm.pkg.github.com}"
-WORKSPACES=("${@:-@aerorf/shared @aerorf/business-rules}")
+
+if [ "$#" -eq 0 ]; then
+  set -- @aerorf/shared @aerorf/business-rules
+fi
 
 publish_if_new() {
   local ws="$1"
