@@ -1,8 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateFlightBlock } from './flight-blocking';
-import { canAccessModule, canAccessTenant } from './permissions';
-import { checkStorageLimit, checkModuleAccess } from './billing-gates';
+import { evaluateFlightBlock, componentOverdueAlertsOnly } from './flight-blocking';
+import { canAccessModule, canAccessTenant, canPerformAction } from './permissions';
+import { checkStorageLimit, checkModuleAccess, checkUserLimit, checkAircraftLimit } from './billing-gates';
 import { buildStorageKey, isStorageKeyInTenant } from './storage-quota';
+import { parsePlanLimits, defaultPlanLimits } from './plan-limits';
+import { isOpenWorkorderStatus } from './workorder-status';
+import { isDocumentValid, isPilotLicenseValid } from './document-validity';
+import { getDocumentExpiryStatus, isAircraftBlockingDocCategory } from './document-status';
+import { evaluateComponentStatus, isComponentOverdue } from './component-status';
+import { validateHourLogTotals } from './hour-log';
+import {
+  canInitiateAircraftTransfer,
+  validateAircraftTransferTargets,
+} from './transfer-access';
 
 describe('permissions', () => {
   it('allows module when listed', () => {
@@ -11,6 +21,11 @@ describe('permissions', () => {
 
   it('denies tenant outside allowed list', () => {
     expect(canAccessTenant('t2', ['t1'], false)).toBe(false);
+  });
+
+  it('allows actions when listed', () => {
+    expect(canPerformAction({ modules: ['dashboard'], actions: ['create'] }, 'create')).toBe(true);
+    expect(canPerformAction({ modules: ['dashboard'], actions: ['read'] }, 'delete')).toBe(false);
   });
 });
 
@@ -37,6 +52,10 @@ describe('flight-blocking', () => {
     });
     expect(r.blocked).toBe(false);
   });
+
+  it('component overdue is alert-only flag', () => {
+    expect(componentOverdueAlertsOnly()).toBe(true);
+  });
 });
 
 describe('billing-gates', () => {
@@ -52,6 +71,18 @@ describe('billing-gates', () => {
     const r = checkModuleAccess('telemetria', { maxUsers: 1, maxAircraft: 1, maxStorageBytes: 1, modules: ['dashboard'] });
     expect(r.allowed).toBe(false);
   });
+
+  it('blocks user limit', () => {
+    const limits = defaultPlanLimits();
+    const r = checkUserLimit({ users: limits.maxUsers, aircraft: 0, storageBytes: 0 }, limits);
+    expect(r.allowed).toBe(false);
+  });
+
+  it('blocks aircraft limit', () => {
+    const limits = defaultPlanLimits();
+    const r = checkAircraftLimit({ users: 0, aircraft: limits.maxAircraft, storageBytes: 0 }, limits);
+    expect(r.allowed).toBe(false);
+  });
 });
 
 describe('storage-quota', () => {
@@ -60,5 +91,69 @@ describe('storage-quota', () => {
     expect(key).toBe('tenants/emp1/unit_uni1/documents/file.pdf');
     expect(isStorageKeyInTenant(key, 'emp1')).toBe(true);
     expect(isStorageKeyInTenant(key, 'emp2')).toBe(false);
+  });
+});
+
+describe('plan-limits', () => {
+  it('parses plano JSON', () => {
+    const limits = parsePlanLimits({ maxUsers: 5, modulos: ['dashboard', 'aviacao'] });
+    expect(limits.maxUsers).toBe(5);
+    expect(limits.modules).toEqual(['dashboard', 'aviacao']);
+  });
+});
+
+describe('workorder-status', () => {
+  it('detects open statuses', () => {
+    expect(isOpenWorkorderStatus('ABERTA')).toBe(true);
+    expect(isOpenWorkorderStatus('EM EXECUÇÃO')).toBe(true);
+    expect(isOpenWorkorderStatus('CONCLUIDA')).toBe(false);
+  });
+});
+
+describe('document-validity', () => {
+  it('treats missing date as valid', () => {
+    expect(isDocumentValid(null)).toBe(true);
+  });
+
+  it('detects expired pilot license', () => {
+    expect(isPilotLicenseValid('2000-01-01', new Date('2026-01-01'))).toBe(false);
+  });
+});
+
+describe('document-status', () => {
+  it('classifies expiry states', () => {
+    expect(getDocumentExpiryStatus('2099-01-01', 30, new Date('2026-01-01'))).toBe('VALIDO');
+    expect(getDocumentExpiryStatus('2000-01-01', 30, new Date('2026-01-01'))).toBe('VENCIDO');
+  });
+
+  it('flags blocking categories', () => {
+    expect(isAircraftBlockingDocCategory('Célula')).toBe(true);
+    expect(isAircraftBlockingDocCategory('Outros')).toBe(false);
+  });
+});
+
+describe('component-status', () => {
+  it('marks overdue hours component', () => {
+    const status = evaluateComponentStatus({ controlePor: 'HORAS', limiteHoras: 100, usadosHoras: 110 });
+    expect(status).toBe('VENCIDO');
+    expect(isComponentOverdue({ controlePor: 'HORAS', limiteHoras: 100, usadosHoras: 110 })).toBe(true);
+  });
+});
+
+describe('hour-log', () => {
+  it('rejects regressive totals', () => {
+    const r = validateHourLogTotals(500, 400);
+    expect(r.valid).toBe(false);
+  });
+});
+
+describe('transfer-access', () => {
+  it('denies transfer without tenant access', () => {
+    expect(canInitiateAircraftTransfer(false, 'e1', 'e2', ['e1'])).toBe(false);
+  });
+
+  it('rejects same origin and destination', () => {
+    const r = validateAircraftTransferTargets('e1', 'e1');
+    expect(r.valid).toBe(false);
   });
 });
