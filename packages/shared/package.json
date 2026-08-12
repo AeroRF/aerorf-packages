@@ -14,11 +14,7 @@
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/AeroRF/aerorf-packages.git",
-    "directory": "packages/shared"
-  },
+  "repository": "github:AeroRF/aerorf-packages",
   "devDependencies": {
     "typescript": "^5.7.3",
     "vitest": "^3.0.5"

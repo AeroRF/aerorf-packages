@@ -21,7 +21,11 @@ publish_if_new() {
   fi
 
   echo "Publishing ${name}@${version} from ${dir}"
-  npm publish "${dir}" --access public --registry="$REGISTRY"
+  npm publish "${dir}" \
+    --access public \
+    --registry="$REGISTRY" \
+    --provenance=false \
+    --ignore-scripts
 }
 
 for dir in "${PACKAGES[@]}"; do
