@@ -12,6 +12,10 @@ import { validateHourLogTotals } from './hour-log';
 import {
   canInitiateAircraftTransfer,
   validateAircraftTransferTargets,
+  canAcceptAircraftTransfer,
+  canTransferBeAccepted,
+  validateNoPendingTransfer,
+  isAircraftTransferLocked,
 } from './transfer-access';
 import { validateEmpresaInput, canDeleteEmpresa, generateExternalId } from './empresa';
 import { validateUnidadeInput, canDeleteUnidade, generateUnitExternalId } from './unidade';
@@ -181,6 +185,35 @@ describe('empresa', () => {
   it('generates external id by segment', () => {
     const id = generateExternalId('Aviação agrícola', ['RF-AGR-0003']);
     expect(id).toBe('RF-AGR-0004');
+  });
+});
+
+describe('transfer-access', () => {
+  it('validates distinct origin and destination', () => {
+    expect(validateAircraftTransferTargets('a', 'b').valid).toBe(true);
+    expect(validateAircraftTransferTargets('a', 'a').valid).toBe(false);
+  });
+
+  it('blocks pending duplicate transfer', () => {
+    expect(validateNoPendingTransfer(true).valid).toBe(false);
+    expect(validateNoPendingTransfer(false).valid).toBe(true);
+  });
+
+  it('allows accept only for destination empresa', () => {
+    expect(canAcceptAircraftTransfer(false, 'dest', 'dest', [])).toBe(true);
+    expect(canAcceptAircraftTransfer(false, 'other', 'dest', [])).toBe(false);
+    expect(canAcceptAircraftTransfer(true, 'other', 'dest', [])).toBe(true);
+  });
+
+  it('detects locked aircraft during transfer', () => {
+    expect(isAircraftTransferLocked('pendente_aceite')).toBe(true);
+    expect(isAircraftTransferLocked('concluida_externa')).toBe(true);
+    expect(isAircraftTransferLocked(null)).toBe(false);
+  });
+
+  it('acceptance only when pending', () => {
+    expect(canTransferBeAccepted('pendente_aceite')).toBe(true);
+    expect(canTransferBeAccepted('concluida')).toBe(false);
   });
 });
 
