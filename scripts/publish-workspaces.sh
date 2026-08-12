@@ -3,24 +3,27 @@ set -euo pipefail
 
 REGISTRY="${NPM_REGISTRY:-https://npm.pkg.github.com}"
 
-if [ "$#" -eq 0 ]; then
-  set -- @aerorf/shared @aerorf/business-rules
-fi
+PACKAGES=(
+  "packages/shared"
+  "packages/business-rules"
+)
 
 publish_if_new() {
-  local ws="$1"
-  local version
-  version="$(npm pkg get version -w "$ws" | tr -d '"')"
+  local dir="$1"
+  local name version
 
-  if npm view "${ws}@${version}" version --registry="$REGISTRY" >/dev/null 2>&1; then
-    echo "Skip ${ws}@${version} (already published)"
+  name="$(node -p "require('./${dir}/package.json').name")"
+  version="$(node -p "require('./${dir}/package.json').version")"
+
+  if npm view "${name}@${version}" version --registry="$REGISTRY" >/dev/null 2>&1; then
+    echo "Skip ${name}@${version} (already published)"
     return 0
   fi
 
-  echo "Publishing ${ws}@${version}"
-  npm publish -w "$ws" --access public --registry="$REGISTRY"
+  echo "Publishing ${name}@${version} from ${dir}"
+  npm publish "${dir}" --access public --registry="$REGISTRY"
 }
 
-for ws in "${WORKSPACES[@]}"; do
-  publish_if_new "$ws"
+for dir in "${PACKAGES[@]}"; do
+  publish_if_new "$dir"
 done

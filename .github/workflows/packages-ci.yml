@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - 'packages/**'
+      - 'scripts/**'
       - '.github/workflows/packages-ci.yml'
       - 'package.json'
   pull_request:
     paths:
       - 'packages/**'
+      - 'scripts/**'
       - 'package.json'
 
 permissions:
