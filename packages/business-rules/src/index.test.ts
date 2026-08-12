@@ -4,7 +4,7 @@ import { canAccessModule, canAccessTenant, canPerformAction } from './permission
 import { checkStorageLimit, checkModuleAccess, checkUserLimit, checkAircraftLimit } from './billing-gates';
 import { buildStorageKey, isStorageKeyInTenant } from './storage-quota';
 import { parsePlanLimits, defaultPlanLimits } from './plan-limits';
-import { isOpenWorkorderStatus } from './workorder-status';
+import { isOpenWorkorderStatus, canTransitionWorkorderStatus } from './workorder-status';
 import { isDocumentValid, isPilotLicenseValid } from './document-validity';
 import { getDocumentExpiryStatus, isAircraftBlockingDocCategory } from './document-status';
 import { evaluateComponentStatus, isComponentOverdue } from './component-status';
@@ -109,6 +109,12 @@ describe('workorder-status', () => {
     expect(isOpenWorkorderStatus('ABERTA')).toBe(true);
     expect(isOpenWorkorderStatus('EM EXECUÇÃO')).toBe(true);
     expect(isOpenWorkorderStatus('CONCLUIDA')).toBe(false);
+    expect(isOpenWorkorderStatus('FINALIZADA')).toBe(false);
+  });
+
+  it('validates transitions', () => {
+    expect(canTransitionWorkorderStatus('ABERTA', 'EM EXECUÇÃO').allowed).toBe(true);
+    expect(canTransitionWorkorderStatus('FINALIZADA', 'CANCELADA').allowed).toBe(false);
   });
 });
 
