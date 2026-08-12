@@ -1,6 +1,6 @@
 {
   "name": "@aerorf/business-rules",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Regras de negócio puras AeroRF (RBAC, billing, flight-block)",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
