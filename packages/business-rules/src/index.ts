@@ -6,6 +6,7 @@ export * from './plan-limits';
 export * from './workorder-status';
 export * from './document-validity';
 export * from './document-status';
+export * from './document-retention';
 export * from './component-status';
 export * from './hour-log';
 export * from './transfer-access';
