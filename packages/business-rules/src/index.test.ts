@@ -14,6 +14,7 @@ import {
   validateAircraftTransferTargets,
 } from './transfer-access';
 import { validateEmpresaInput, canDeleteEmpresa, generateExternalId } from './empresa';
+import { validateUnidadeInput, canDeleteUnidade, generateUnitExternalId } from './unidade';
 
 describe('permissions', () => {
   it('allows module when listed', () => {
@@ -174,5 +175,21 @@ describe('empresa', () => {
   it('generates external id by segment', () => {
     const id = generateExternalId('Aviação agrícola', ['RF-AGR-0003']);
     expect(id).toBe('RF-AGR-0004');
+  });
+});
+
+describe('unidade', () => {
+  it('validates required fields', () => {
+    const r = validateUnidadeInput({ nome: '', empresaId: '' });
+    expect(r.valid).toBe(false);
+  });
+
+  it('generates unit external id', () => {
+    expect(generateUnitExternalId('RF-AGR-0001', ['RF-AGR-0001-UNI002'])).toBe('RF-AGR-0001-UNI003');
+  });
+
+  it('blocks delete with dependencies', () => {
+    expect(canDeleteUnidade({ usersCount: 1, aircraftCount: 0 }).allowed).toBe(false);
+    expect(canDeleteUnidade({ usersCount: 0, aircraftCount: 0 }).allowed).toBe(true);
   });
 });

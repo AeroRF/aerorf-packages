@@ -10,3 +10,4 @@ export * from './component-status';
 export * from './hour-log';
 export * from './transfer-access';
 export * from './empresa';
+export * from './unidade';
