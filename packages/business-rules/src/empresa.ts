@@ -58,7 +58,7 @@ export function isValidCnpj(value: string | null | undefined): boolean {
 }
 
 export function isValidEmail(value: string | null | undefined): boolean {
-  if (!value || !String(value).trim()) return true;
+  if (!value || !String(value).trim()) return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim());
 }
 
@@ -67,7 +67,8 @@ export function validateEmpresaInput(input: EmpresaInput): EmpresaValidationResu
   if (!String(input.nome ?? '').trim()) errors.push('Informe a razão social.');
   if (!String(input.nomeFantasia ?? '').trim()) errors.push('Informe o nome fantasia.');
   if (input.cnpj && !isValidCnpj(input.cnpj)) errors.push('CNPJ inválido.');
-  if (!isValidEmail(input.email)) errors.push('E-mail inválido.');
+  if (!String(input.email ?? '').trim()) errors.push('Informe o e-mail da empresa.');
+  else if (!isValidEmail(input.email)) errors.push('E-mail inválido.');
   return { valid: errors.length === 0, errors };
 }
 
