@@ -42,9 +42,7 @@ jobs:
           scope: '@aerorf'
       - run: npm ci
       - run: npm run build
-      - run: npm publish -w @aerorf/shared --access public
+      - name: Publish packages (skip existing versions)
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - run: npm publish -w @aerorf/business-rules --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/publish-workspaces.sh
