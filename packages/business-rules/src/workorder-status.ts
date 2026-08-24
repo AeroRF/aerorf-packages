@@ -44,14 +44,15 @@ export function normalizeWorkorderStatus(status: string | null | undefined): str
     return 'EM EXECUÇÃO';
   }
   if (raw.includes('final') || raw.includes('conclu') || raw === 'closed') return 'FINALIZADA';
-  if (raw === 'cancelada' || raw === 'estornada') return 'CANCELADA';
+  if (raw === 'estornada') return 'ESTORNADA';
+  if (raw === 'cancelada') return 'CANCELADA';
   return String(status ?? '').trim().toUpperCase();
 }
 
 export function isOpenWorkorderStatus(status: string | null | undefined): boolean {
   if (!status) return false;
   const normalized = normalizeWorkorderStatus(status);
-  if (normalized === 'FINALIZADA' || normalized === 'CANCELADA') return false;
+  if (normalized === 'FINALIZADA' || normalized === 'CANCELADA' || normalized === 'ESTORNADA') return false;
   return OPEN_STATUSES.has(status.trim().toLowerCase()) || normalized === 'ABERTA' || normalized === 'EM EXECUÇÃO';
 }
 
@@ -61,6 +62,15 @@ export function isRunningWorkorderStatus(status: string | null | undefined): boo
 
 export function isFinishedWorkorderStatus(status: string | null | undefined): boolean {
   return normalizeWorkorderStatus(status) === 'FINALIZADA';
+}
+
+export function isReversedWorkorderStatus(status: string | null | undefined): boolean {
+  return normalizeWorkorderStatus(status) === 'ESTORNADA';
+}
+
+export function isClosedWorkorderStatus(status: string | null | undefined): boolean {
+  const normalized = normalizeWorkorderStatus(status);
+  return normalized === 'FINALIZADA' || normalized === 'CANCELADA' || normalized === 'ESTORNADA';
 }
 
 export function validateWorkorderStatus(status: string | null | undefined): { valid: boolean; message?: string } {
@@ -83,7 +93,14 @@ export function canTransitionWorkorderStatus(
   const check = validateWorkorderStatus(next);
   if (!check.valid) return { allowed: false, message: check.message };
 
-  if (current === 'FINALIZADA' || current === 'CANCELADA') {
+  if (next === 'ESTORNADA') {
+    if (current !== 'FINALIZADA') {
+      return { allowed: false, message: 'Somente OS finalizada pode ser estornada.' };
+    }
+    return { allowed: true };
+  }
+
+  if (current === 'FINALIZADA' || current === 'CANCELADA' || current === 'ESTORNADA') {
     return { allowed: false, message: 'OS já encerrada.' };
   }
 
@@ -106,6 +123,6 @@ export function workorderStatusPillClass(status: string | null | undefined): 'op
   const normalized = normalizeWorkorderStatus(status);
   if (normalized === 'EM EXECUÇÃO') return 'run';
   if (normalized === 'FINALIZADA') return 'done';
-  if (normalized === 'CANCELADA') return 'blocked';
+  if (normalized === 'CANCELADA' || normalized === 'ESTORNADA') return 'blocked';
   return 'open';
 }

@@ -13,3 +13,4 @@ export * from './transfer-access';
 export * from './transfer-history-policy';
 export * from './empresa';
 export * from './unidade';
+export * from './person-documents';

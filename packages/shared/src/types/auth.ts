@@ -19,6 +19,8 @@ export interface JwtPayload {
   permissions: UserPermissions;
 }
 
+export type AppLocale = 'pt' | 'en' | 'es';
+
 export interface AuthSession {
   uid: string;
   email: string;
@@ -33,6 +35,8 @@ export interface AuthSession {
   modulos: string[];
   permissoes: UserPermissions;
   fullAccess?: boolean;
+  locale?: AppLocale;
+  empresaDefaultLocale?: AppLocale;
 }
 
 export interface LoginResponse {

@@ -7,6 +7,7 @@ import { parsePlanLimits, defaultPlanLimits } from './plan-limits';
 import { isOpenWorkorderStatus, canTransitionWorkorderStatus } from './workorder-status';
 import { isDocumentValid, isPilotLicenseValid } from './document-validity';
 import { getDocumentExpiryStatus, isAircraftBlockingDocCategory } from './document-status';
+import { isPilotBlockedForFlight, isComponentInTransit } from './person-documents';
 import { evaluateComponentStatus, isComponentOverdue } from './component-status';
 import { validateHourLogTotals } from './hour-log';
 import {
@@ -119,6 +120,8 @@ describe('workorder-status', () => {
   it('validates transitions', () => {
     expect(canTransitionWorkorderStatus('ABERTA', 'EM EXECUÇÃO').allowed).toBe(true);
     expect(canTransitionWorkorderStatus('FINALIZADA', 'CANCELADA').allowed).toBe(false);
+    expect(canTransitionWorkorderStatus('FINALIZADA', 'ESTORNADA').allowed).toBe(true);
+    expect(canTransitionWorkorderStatus('ABERTA', 'ESTORNADA').allowed).toBe(false);
   });
 });
 
@@ -140,7 +143,26 @@ describe('document-status', () => {
 
   it('flags blocking categories', () => {
     expect(isAircraftBlockingDocCategory('Célula')).toBe(true);
+    expect(isAircraftBlockingDocCategory('CVA (Célula)')).toBe(true);
+    expect(isAircraftBlockingDocCategory('CA (Aeronavegabilidade)')).toBe(false);
     expect(isAircraftBlockingDocCategory('Outros')).toBe(false);
+  });
+});
+
+describe('person-documents', () => {
+  it('blocks pilot with expired license', () => {
+    expect(isPilotBlockedForFlight('2000-01-01', [], new Date('2026-01-01'))).toBe(true);
+  });
+
+  it('blocks pilot with expired document', () => {
+    expect(
+      isPilotBlockedForFlight('2099-01-01', [{ validade: '2000-01-01', alertaDias: 30 }], new Date('2026-01-01')),
+    ).toBe(true);
+  });
+
+  it('detects component in transit', () => {
+    expect(isComponentInTransit('EM_TRANSITO')).toBe(true);
+    expect(isComponentInTransit('INSTALADO')).toBe(false);
   });
 });
 
