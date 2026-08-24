@@ -25,7 +25,15 @@ export function isPilotBlockedForFlight(
 }
 
 export const COMPONENT_TRANSIT_STATUS = 'EM_TRANSITO';
+export const COMPONENT_MOVEMENT_CANCELLED_STATUS = 'CANCELADA';
 
 export function isComponentInTransit(status: string | null | undefined): boolean {
   return String(status ?? '').trim().toUpperCase() === COMPONENT_TRANSIT_STATUS;
+}
+
+export function isMovementWorkorderType(tipoExecucao: string | null | undefined): boolean {
+  const t = String(tipoExecucao ?? '')
+    .trim()
+    .toUpperCase();
+  return t === 'RETIRADA' || t === 'INSTALACAO';
 }

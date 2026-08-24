@@ -7,7 +7,7 @@ import { parsePlanLimits, defaultPlanLimits } from './plan-limits';
 import { isOpenWorkorderStatus, canTransitionWorkorderStatus } from './workorder-status';
 import { isDocumentValid, isPilotLicenseValid } from './document-validity';
 import { getDocumentExpiryStatus, isAircraftBlockingDocCategory } from './document-status';
-import { isPilotBlockedForFlight, isComponentInTransit } from './person-documents';
+import { isPilotBlockedForFlight, isComponentInTransit, isMovementWorkorderType } from './person-documents';
 import { evaluateComponentStatus, isComponentOverdue } from './component-status';
 import { validateHourLogTotals } from './hour-log';
 import {
@@ -163,6 +163,12 @@ describe('person-documents', () => {
   it('detects component in transit', () => {
     expect(isComponentInTransit('EM_TRANSITO')).toBe(true);
     expect(isComponentInTransit('INSTALADO')).toBe(false);
+  });
+
+  it('detects movement workorder types', () => {
+    expect(isMovementWorkorderType('RETIRADA')).toBe(true);
+    expect(isMovementWorkorderType('instalacao')).toBe(true);
+    expect(isMovementWorkorderType('PREVENTIVA')).toBe(false);
   });
 });
 
