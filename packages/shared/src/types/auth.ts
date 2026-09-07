@@ -17,6 +17,7 @@ export interface JwtPayload {
   empresasPermitidas: string[];
   unidadesPermitidas: string[];
   permissions: UserPermissions;
+  fullAccess?: boolean;
 }
 
 export type AppLocale = 'pt' | 'en' | 'es';
