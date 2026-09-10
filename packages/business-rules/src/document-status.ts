@@ -7,11 +7,34 @@ export function getDocumentExpiryStatus(
 ): DocumentExpiryStatus {
   if (!validade) return 'SEM_VALIDADE';
 
-  const dt = validade instanceof Date ? validade : new Date(String(validade).slice(0, 10));
-  if (Number.isNaN(dt.getTime())) return 'SEM_VALIDADE';
+  // Parse the validade date - for string "YYYY-MM-DD", treat as local date (not UTC)
+  let expYear: number, expMonth: number, expDay: number;
+  if (validade instanceof Date) {
+    expYear = validade.getFullYear();
+    expMonth = validade.getMonth();
+    expDay = validade.getDate();
+  } else {
+    const dateStr = String(validade).slice(0, 10);
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return 'SEM_VALIDADE';
+    expYear = parseInt(match[1], 10);
+    expMonth = parseInt(match[2], 10) - 1; // JS months are 0-indexed
+    expDay = parseInt(match[3], 10);
+    // Validate the date
+    const testDate = new Date(expYear, expMonth, expDay);
+    if (testDate.getFullYear() !== expYear || testDate.getMonth() !== expMonth || testDate.getDate() !== expDay) {
+      return 'SEM_VALIDADE';
+    }
+  }
 
-  const ref = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const exp = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+  // Use local date components for comparison to avoid timezone issues
+  const refYear = today.getFullYear();
+  const refMonth = today.getMonth();
+  const refDay = today.getDate();
+
+  // Calculate difference in days using local dates
+  const ref = new Date(refYear, refMonth, refDay);
+  const exp = new Date(expYear, expMonth, expDay);
   const diff = Math.ceil((exp.getTime() - ref.getTime()) / 86400000);
 
   if (diff < 0) return 'VENCIDO';
