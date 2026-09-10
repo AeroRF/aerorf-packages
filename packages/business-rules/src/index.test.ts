@@ -9,6 +9,8 @@ import { isDocumentValid, isPilotLicenseValid } from './document-validity';
 import { getDocumentExpiryStatus, isAircraftBlockingDocCategory } from './document-status';
 import { isPilotBlockedForFlight, isComponentInTransit, isMovementWorkorderType } from './person-documents';
 import { evaluateComponentStatus, isComponentOverdue } from './component-status';
+import { applyOverhaulCounters, formatTsoDisplay, isForbiddenCellComponent } from './component-condition';
+import { calcDeltaPartidaCorte, competenciaFromDate, isAgriculturalOperation, periodOpeningBalance } from './flight-log';
 import { validateHourLogTotals } from './hour-log';
 import {
   canInitiateAircraftTransfer,
@@ -184,6 +186,46 @@ describe('hour-log', () => {
   it('rejects regressive totals', () => {
     const r = validateHourLogTotals(500, 400);
     expect(r.valid).toBe(false);
+  });
+});
+
+describe('component-condition', () => {
+  it('shows NOVO on TSO for new pieces even after hours', () => {
+    expect(formatTsoDisplay({ condicao: 'NOVO', tso: 0, tsoNovo: true })).toBe('NOVO');
+    expect(formatTsoDisplay({ condicao: 'USADO', tso: 300 })).toBe('300');
+  });
+
+  it('keeps TSN and resets TSO on overhaul', () => {
+    const next = applyOverhaulCounters({ tsn: 2000, csn: 400 });
+    expect(next.tsn).toBe(2000);
+    expect(next.tso).toBe(0);
+    expect(next.cso).toBe(0);
+    expect(next.condicao).toBe('REVISADA');
+  });
+
+  it('rejects cell as component', () => {
+    expect(isForbiddenCellComponent('CELULA', 'Célula')).toBe(true);
+    expect(isForbiddenCellComponent('MOTOR', 'Motor')).toBe(false);
+  });
+});
+
+describe('flight-log', () => {
+  it('computes partida to corte across midnight', () => {
+    expect(calcDeltaPartidaCorte('22:00', '00:30')).toBe(2.5);
+  });
+
+  it('treats agricola as agricultural profile', () => {
+    expect(isAgriculturalOperation('AGRICOLA')).toBe(true);
+    expect(isAgriculturalOperation('PARTICULAR')).toBe(false);
+  });
+
+  it('normalizes competencia to first day of month', () => {
+    expect(competenciaFromDate('2026-09-10')).toBe('2026-09-01');
+  });
+
+  it('opens the month from previous closing without duplicating hours', () => {
+    expect(periodOpeningBalance(1000, 1020, 20)).toBe(1000);
+    expect(periodOpeningBalance(null, 1020, 20)).toBe(1000);
   });
 });
 

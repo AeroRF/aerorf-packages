@@ -8,6 +8,8 @@ export * from './document-validity';
 export * from './document-status';
 export * from './document-retention';
 export * from './component-status';
+export * from './component-condition';
+export * from './flight-log';
 export * from './hour-log';
 export * from './transfer-access';
 export * from './transfer-history-policy';
