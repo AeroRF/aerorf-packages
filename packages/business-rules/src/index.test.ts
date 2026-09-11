@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { evaluateFlightBlock, componentOverdueAlertsOnly } from './flight-blocking';
-import { canAccessModule, canAccessTenant, canPerformAction } from './permissions';
+import { canAccessModule, canAccessTenant, canAccessUnit, canPerformAction } from './permissions';
 import { checkStorageLimit, checkModuleAccess, checkUserLimit, checkAircraftLimit } from './billing-gates';
 import { buildStorageKey, isStorageKeyInTenant } from './storage-quota';
 import { parsePlanLimits, defaultPlanLimits } from './plan-limits';
@@ -30,6 +30,17 @@ describe('permissions', () => {
 
   it('denies tenant outside allowed list', () => {
     expect(canAccessTenant('t2', ['t1'], false)).toBe(false);
+  });
+
+  it('restricts unit when allow-list is set', () => {
+    expect(canAccessUnit('u2', ['u1'], false)).toBe(false);
+    expect(canAccessUnit('u1', ['u1'], false)).toBe(true);
+    expect(canAccessUnit('u1', [], false)).toBe(true);
+  });
+
+  it('empty unit list means company-wide access', () => {
+    expect(canAccessUnit('filial-a', [], false)).toBe(true);
+    expect(canAccessUnit('filial-b', [], false)).toBe(true);
   });
 
   it('allows actions when listed', () => {
