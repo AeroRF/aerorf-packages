@@ -12,6 +12,7 @@ export * from './component-status';
 export * from './component-condition';
 export * from './flight-log';
 export * from './hour-log';
+export * from './hour-control';
 export * from './transfer-access';
 export * from './transfer-history-policy';
 export * from './empresa';

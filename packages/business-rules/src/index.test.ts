@@ -13,6 +13,7 @@ import { evaluateComponentStatus, isComponentOverdue } from './component-status'
 import { applyOverhaulCounters, formatTsoDisplay, isForbiddenCellComponent } from './component-condition';
 import { calcDeltaPartidaCorte, competenciaFromDate, isAgriculturalOperation, periodOpeningBalance } from './flight-log';
 import { validateHourLogTotals } from './hour-log';
+import { aircraftHoursAtDue, remainingHoursByControl } from './hour-control';
 import {
   canInitiateAircraftTransfer,
   validateAircraftTransferTargets,
@@ -210,6 +211,24 @@ describe('component-status', () => {
     const status = evaluateComponentStatus({ controlePor: 'HORAS', limiteHoras: 100, usadosHoras: 110 });
     expect(status).toBe('VENCIDO');
     expect(isComponentOverdue({ controlePor: 'HORAS', limiteHoras: 100, usadosHoras: 110 })).toBe(true);
+  });
+});
+
+describe('hour-control', () => {
+  it('motor TBO/TSO: saldo cai e HS/T permanece após o voo', () => {
+    const antes = remainingHoursByControl({ tboHoras: 3000, tso: 1092.1, tsn: 4017.5 });
+    expect(antes).toBeCloseTo(1907.9, 1);
+    expect(aircraftHoursAtDue(4017.5, antes)).toBeCloseTo(5925.4, 1);
+
+    const depois = remainingHoursByControl({ tboHoras: 3000, tso: 1122.1, tsn: 4047.5 });
+    expect(depois).toBeCloseTo(1877.9, 1);
+    expect(aircraftHoursAtDue(4047.5, depois)).toBeCloseTo(5925.4, 1);
+  });
+
+  it('linha só com TLV usa TSN, sem TBO', () => {
+    const saldo = remainingHoursByControl({ tlvHoras: 2000, tsn: 836.1 });
+    expect(saldo).toBeCloseTo(1163.9, 1);
+    expect(aircraftHoursAtDue(4017.5, saldo)).toBeCloseTo(5181.4, 1);
   });
 });
 
