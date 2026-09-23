@@ -14,6 +14,7 @@ import { applyOverhaulCounters, formatTsoDisplay, isForbiddenCellComponent } fro
 import { calcDeltaPartidaCorte, competenciaFromDate, isAgriculturalOperation, periodOpeningBalance } from './flight-log';
 import { validateHourLogTotals } from './hour-log';
 import { aircraftHoursAtDue, remainingHoursByControl } from './hour-control';
+import { planMissingHourImpacts } from './hour-impact';
 import {
   canInitiateAircraftTransfer,
   validateAircraftTransferTargets,
@@ -229,6 +230,41 @@ describe('hour-control', () => {
     const saldo = remainingHoursByControl({ tlvHoras: 2000, tsn: 836.1 });
     expect(saldo).toBeCloseTo(1163.9, 1);
     expect(aircraftHoursAtDue(4017.5, saldo)).toBeCloseTo(5181.4, 1);
+  });
+
+  it('mapa PT-WQD: voo de 30 h atualiza TSO/TSN e o HS/T não anda', () => {
+    const aircraftAfter = 4047.5;
+    const log = { id: 'voo-30', horasDelta: 30, appliedTo: ['motor', 'hsi', 'helice'] };
+    const rows = [
+      { id: 'motor', tipo: 'MOTOR', tsn: 4017.5, tboHoras: 3000, tso: 1092.1, due: 5925.4 },
+      { id: 'hsi', tipo: 'MOTOR', tsn: 4017.5, tboHoras: 1500, tso: 344.1, due: 5173.4 },
+      { id: 'helice', tipo: 'HELICE', tsn: 4017.5, tboHoras: 3000, tso: 1.6, due: 7015.9 },
+    ];
+
+    const plan = planMissingHourImpacts({
+      aircraftHours: aircraftAfter,
+      logs: [log],
+      components: rows.map(({ id, tipo, tsn }) => ({ id, tipo, tsn })),
+    });
+    expect(plan).toHaveLength(3);
+    expect(plan.every((p) => p.horas === 30)).toBe(true);
+
+    for (const row of rows) {
+      const tso = row.tso + 30;
+      const tsn = row.tsn + 30;
+      const saldo = remainingHoursByControl({ tboHoras: row.tboHoras, tso, tsn });
+      expect(saldo).toBeCloseTo(row.tboHoras - tso, 1);
+      expect(aircraftHoursAtDue(aircraftAfter, saldo)).toBeCloseTo(row.due, 1);
+    }
+  });
+
+  it('não reaplica se o TSN já acompanhou a aeronave', () => {
+    const plan = planMissingHourImpacts({
+      aircraftHours: 4047.5,
+      logs: [{ id: 'voo-30', horasDelta: 30, appliedTo: ['motor'] }],
+      components: [{ id: 'motor', tipo: 'MOTOR', tsn: 4047.5 }],
+    });
+    expect(plan).toHaveLength(0);
   });
 });
 
