@@ -1,3 +1,5 @@
+import { toIsoDateOnly } from './iso-date';
+
 export type DocumentExpiryStatus = 'SEM_VALIDADE' | 'VALIDO' | 'A_VENCER' | 'VENCIDO';
 
 export function getDocumentExpiryStatus(
@@ -5,26 +7,17 @@ export function getDocumentExpiryStatus(
   alertDays = 30,
   today = new Date(),
 ): DocumentExpiryStatus {
-  if (!validade) return 'SEM_VALIDADE';
+  const iso = toIsoDateOnly(validade);
+  if (!iso) return 'SEM_VALIDADE';
 
-  // Parse the validade date - for string "YYYY-MM-DD", treat as local date (not UTC)
-  let expYear: number, expMonth: number, expDay: number;
-  if (validade instanceof Date) {
-    expYear = validade.getFullYear();
-    expMonth = validade.getMonth();
-    expDay = validade.getDate();
-  } else {
-    const dateStr = String(validade).slice(0, 10);
-    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!match) return 'SEM_VALIDADE';
-    expYear = parseInt(match[1], 10);
-    expMonth = parseInt(match[2], 10) - 1; // JS months are 0-indexed
-    expDay = parseInt(match[3], 10);
-    // Validate the date
-    const testDate = new Date(expYear, expMonth, expDay);
-    if (testDate.getFullYear() !== expYear || testDate.getMonth() !== expMonth || testDate.getDate() !== expDay) {
-      return 'SEM_VALIDADE';
-    }
+  const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return 'SEM_VALIDADE';
+  const expYear = parseInt(match[1], 10);
+  const expMonth = parseInt(match[2], 10) - 1;
+  const expDay = parseInt(match[3], 10);
+  const testDate = new Date(expYear, expMonth, expDay);
+  if (testDate.getFullYear() !== expYear || testDate.getMonth() !== expMonth || testDate.getDate() !== expDay) {
+    return 'SEM_VALIDADE';
   }
 
   // Use local date components for comparison to avoid timezone issues

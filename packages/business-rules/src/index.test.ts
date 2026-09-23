@@ -7,6 +7,7 @@ import { parsePlanLimits, defaultPlanLimits } from './plan-limits';
 import { isOpenWorkorderStatus, canTransitionWorkorderStatus } from './workorder-status';
 import { isDocumentValid, isPilotLicenseValid } from './document-validity';
 import { getDocumentExpiryStatus, isAircraftBlockingDocCategory } from './document-status';
+import { toIsoDateOnly } from './iso-date';
 import { isPilotBlockedForFlight, isComponentInTransit, isMovementWorkorderType } from './person-documents';
 import { evaluateComponentStatus, isComponentOverdue } from './component-status';
 import { applyOverhaulCounters, formatTsoDisplay, isForbiddenCellComponent } from './component-condition';
@@ -146,12 +147,31 @@ describe('document-validity', () => {
   it('detects expired pilot license', () => {
     expect(isPilotLicenseValid('2000-01-01', new Date('2026-01-01'))).toBe(false);
   });
+
+  it('keeps a 2029 license valid when pg DATE arrives as Date', () => {
+    const today = new Date('2026-09-23T12:00:00');
+    const pgDate = new Date('2029-10-22T00:00:00.000Z');
+    expect(toIsoDateOnly(pgDate)).toBe('2029-10-22');
+    expect(isPilotLicenseValid(pgDate, today)).toBe(true);
+    expect(isPilotBlockedForFlight(pgDate, [], today)).toBe(false);
+  });
+
+  it('does not treat Date.toString().slice(0, 10) as year 2001', () => {
+    const today = new Date('2026-09-23T12:00:00');
+    const sliced = String(new Date('2029-10-22T00:00:00.000Z')).slice(0, 10);
+    expect(toIsoDateOnly(sliced)).toBeNull();
+    expect(isDocumentValid(sliced, today)).toBe(true);
+    expect(isPilotBlockedForFlight(sliced, [], today)).toBe(false);
+  });
 });
 
 describe('document-status', () => {
   it('classifies expiry states', () => {
     expect(getDocumentExpiryStatus('2099-01-01', 30, new Date('2026-01-01'))).toBe('VALIDO');
     expect(getDocumentExpiryStatus('2000-01-01', 30, new Date('2026-01-01'))).toBe('VENCIDO');
+    expect(getDocumentExpiryStatus(new Date('2029-10-22T00:00:00.000Z'), 30, new Date('2026-09-23'))).toBe(
+      'VALIDO',
+    );
   });
 
   it('flags blocking categories', () => {
