@@ -1,4 +1,5 @@
 import { hoursUsedForTbo } from './component-condition';
+import { getDocumentExpiryStatus } from './document-status';
 
 export type ComponentStatus = 'OK' | 'ATENCAO' | 'VENCIDO';
 
@@ -55,15 +56,11 @@ function calendarStatus(
   alertDias: number,
   today: Date,
 ): ComponentStatus | null {
-  if (!dataValidade) return null;
-  const raw = dataValidade instanceof Date
-    ? dataValidade
-    : new Date(String(dataValidade).slice(0, 10));
-  if (Number.isNaN(raw.getTime())) return null;
-  const ref = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const exp = new Date(raw.getFullYear(), raw.getMonth(), raw.getDate());
-  const diff = Math.ceil((exp.getTime() - ref.getTime()) / 86400000);
-  return restStatus(diff, alertDias);
+  const expiry = getDocumentExpiryStatus(dataValidade, alertDias, today);
+  if (expiry === 'VENCIDO') return 'VENCIDO';
+  if (expiry === 'A_VENCER') return 'ATENCAO';
+  if (expiry === 'VALIDO') return 'OK';
+  return null;
 }
 
 function hasExtendedLimits(component: ComponentLimits): boolean {

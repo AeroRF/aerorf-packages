@@ -176,6 +176,19 @@ describe('document-status', () => {
     );
   });
 
+  it('does not mark a future pg Date as expired on the map or alerts', () => {
+    const due = new Date('2029-10-22T00:00:00.000Z');
+    const today = new Date('2026-09-24T12:00:00');
+    expect(getDocumentExpiryStatus(due, 30, today)).toBe('VALIDO');
+    expect(evaluateComponentStatus({ controlePor: 'DATA', dataValidade: due }, today)).toBe('OK');
+    expect(
+      evaluateComponentStatus(
+        { controlePor: 'DATA', dataValidade: String(due).slice(0, 10), controles: { calendario: true } },
+        today,
+      ),
+    ).toBe('OK');
+  });
+
   it('flags blocking categories', () => {
     expect(isAircraftBlockingDocCategory('Célula')).toBe(true);
     expect(isAircraftBlockingDocCategory('CVA (Célula)')).toBe(true);
