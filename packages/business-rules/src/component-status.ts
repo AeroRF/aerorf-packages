@@ -63,6 +63,16 @@ function calendarStatus(
   return null;
 }
 
+function flagOn(flag: boolean | undefined, inferred: boolean): boolean {
+  if (flag === true) return true;
+  if (flag === false) return false;
+  return inferred;
+}
+
+function positiveLimit(value: number | null | undefined): boolean {
+  return Number(value ?? 0) > 0;
+}
+
 function hasExtendedLimits(component: ComponentLimits): boolean {
   const c = component.controles ?? {};
   return Boolean(
@@ -116,10 +126,17 @@ export function evaluateComponentStatus(
   const alertH = Number(component.alertHoras ?? 0);
   const alertC = Number(component.alertCiclos ?? 0);
 
-  const hoursOn = ctrl.horas === true || normalizeControl(component.controlePor) === 'HORAS' || Boolean(component.tlvHoras || component.tboHoras || component.limiteHoras);
-  const cyclesOn = ctrl.ciclos === true || normalizeControl(component.controlePor) === 'CICLOS' || Boolean(component.limiteCiclos);
-  const landingsOn = ctrl.pousos === true || Boolean(component.limitePousos);
-  const calOn = ctrl.calendario === true || normalizeControl(component.controlePor) === 'DATA' || Boolean(component.dataValidade);
+  const hasHourLimit =
+    positiveLimit(component.tlvHoras) || positiveLimit(component.tboHoras) || positiveLimit(component.limiteHoras);
+  const calInferred =
+    normalizeControl(component.controlePor) === 'DATA' || Boolean(component.dataValidade);
+  const hoursInferred =
+    hasHourLimit || (normalizeControl(component.controlePor) === 'HORAS' && ctrl.calendario !== true && !calInferred);
+
+  const hoursOn = flagOn(ctrl.horas, hoursInferred);
+  const cyclesOn = flagOn(ctrl.ciclos, normalizeControl(component.controlePor) === 'CICLOS' || Boolean(component.limiteCiclos));
+  const landingsOn = flagOn(ctrl.pousos, Boolean(component.limitePousos));
+  const calOn = flagOn(ctrl.calendario, calInferred);
 
   if (hoursOn) {
     if (Number(component.tlvHoras ?? 0) > 0) {

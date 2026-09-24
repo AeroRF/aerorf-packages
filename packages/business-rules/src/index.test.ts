@@ -189,6 +189,42 @@ describe('document-status', () => {
     ).toBe('OK');
   });
 
+  it('does not treat calendar documents as hour-expired when controle_por defaults to HORAS', () => {
+    const today = new Date('2026-09-24T12:00:00');
+    expect(
+      evaluateComponentStatus(
+        {
+          controlePor: 'HORAS',
+          controles: { horas: false, calendario: true },
+          dataValidade: new Date('2029-10-22T00:00:00.000Z'),
+          tsn: 4047.5,
+          limiteHoras: 100,
+        },
+        today,
+      ),
+    ).toBe('OK');
+    expect(
+      evaluateComponentStatus(
+        {
+          controlePor: 'HORAS',
+          controles: { horas: false, calendario: true },
+          tsn: 4047.5,
+        },
+        today,
+      ),
+    ).toBe('OK');
+    expect(
+      evaluateComponentStatus(
+        {
+          controlePor: 'HORAS',
+          controles: { horas: false, calendario: true },
+          dataValidade: '2026-08-29',
+        },
+        today,
+      ),
+    ).toBe('VENCIDO');
+  });
+
   it('flags blocking categories', () => {
     expect(isAircraftBlockingDocCategory('Célula')).toBe(true);
     expect(isAircraftBlockingDocCategory('CVA (Célula)')).toBe(true);
@@ -257,7 +293,7 @@ describe('hour-control', () => {
     const plan = planMissingHourImpacts({
       aircraftHours: aircraftAfter,
       logs: [log],
-      components: rows.map(({ id, tipo, tsn }) => ({ id, tipo, tsn })),
+      components: rows.map(({ id, tipo, tsn, tboHoras, tso }) => ({ id, tipo, tsn, tboHoras, tso })),
     });
     expect(plan).toHaveLength(3);
     expect(plan.every((p) => p.horas === 30)).toBe(true);

@@ -47,18 +47,13 @@ export function installedByFlightDate(instalacao: string | null | undefined, dat
   return inst <= flight;
 }
 
-/** Documento/inspeção entram se tiverem controle por horas (TBO, TLV, TSN ou TSO). */
+/** Só entra no voo quem tem controle de horas (flag ou TBO/TLV). TSN isolado não basta. */
 export function receivesHourImpact(comp: ComponentForImpact): boolean {
   if (comp.horas === true) return true;
   if (comp.horas === false && !(Number(comp.tboHoras) > 0) && !(Number(comp.tlvHoras) > 0)) {
     return false;
   }
-  return Boolean(
-    Number(comp.tboHoras) > 0 ||
-      Number(comp.tlvHoras) > 0 ||
-      Number(comp.tsn) > 0 ||
-      Number(comp.tso) > 0,
-  );
+  return Number(comp.tboHoras) > 0 || Number(comp.tlvHoras) > 0;
 }
 
 /** TSN ainda é o das horas da aeronave antes dos voos vigentes (espelho atrasado). */
