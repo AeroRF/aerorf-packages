@@ -1,3 +1,5 @@
+import { nonNegativeHours } from './component-counters';
+
 /** Controle por horas no mapa: TBO usa TSO; TLV usa TSN. */
 
 export type HourControlInput = {
@@ -15,8 +17,7 @@ function positiveLimit(value: number | null | undefined): number | null {
 }
 
 function hours(value: number | null | undefined): number {
-  const n = Number(value ?? 0);
-  return Number.isFinite(n) ? n : 0;
+  return nonNegativeHours(value);
 }
 
 /** Saldo = TBO − TSO. Peça NOVO ainda não tem TSO: usa TSN. */

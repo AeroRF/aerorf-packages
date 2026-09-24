@@ -14,6 +14,11 @@ import { applyOverhaulCounters, formatTsoDisplay, isForbiddenCellComponent } fro
 import { calcDeltaPartidaCorte, competenciaFromDate, isAgriculturalOperation, periodOpeningBalance } from './flight-log';
 import { validateHourLogTotals } from './hour-log';
 import { aircraftHoursAtDue, remainingHoursByControl } from './hour-control';
+import {
+  countersAfterRetiradaRollback,
+  countersFromMovementMetadata,
+  snapshotComponentCounters,
+} from './component-counters';
 import { planMissingHourImpacts } from './hour-impact';
 import {
   canInitiateAircraftTransfer,
@@ -176,6 +181,14 @@ describe('document-status', () => {
     );
   });
 
+  it('pg Date a 28 dias é A_VENCER, não VENCIDO', () => {
+    const today = new Date('2026-09-24T12:00:00');
+    const due = new Date('2026-10-22T00:00:00.000Z');
+    expect(toIsoDateOnly(due)).toBe('2026-10-22');
+    expect(getDocumentExpiryStatus(due, 30, today)).toBe('A_VENCER');
+    expect(getDocumentExpiryStatus(String(due).slice(0, 10), 30, today)).not.toBe('VENCIDO');
+  });
+
   it('does not mark a future pg Date as expired on the map or alerts', () => {
     const due = new Date('2029-10-22T00:00:00.000Z');
     const today = new Date('2026-09-24T12:00:00');
@@ -273,6 +286,52 @@ describe('component-status', () => {
     const status = evaluateComponentStatus({ controlePor: 'HORAS', limiteHoras: 100, usadosHoras: 110 });
     expect(status).toBe('VENCIDO');
     expect(isComponentOverdue({ controlePor: 'HORAS', limiteHoras: 100, usadosHoras: 110 })).toBe(true);
+  });
+});
+
+describe('component-counters — estorno de retirada', () => {
+  const hsiPrMlp = {
+    tsn: 1500,
+    tso: -0.1,
+    usadosHoras: 1500,
+    csn: 0,
+    cso: 0,
+    usadosCiclos: 0,
+  };
+
+  it('não grava horas da aeronave (horas_retirada) em TSO/TSN/usados', () => {
+    const restored = countersAfterRetiradaRollback({
+      current: hsiPrMlp,
+      horasRetirada: 4047.5,
+    });
+    expect(restored.tsn).toBe(1500);
+    expect(restored.usadosHoras).toBe(1500);
+    expect(restored.tso).toBe(0);
+    expect(restored.tsn).not.toBe(4047.5);
+    expect(restored.usadosHoras).not.toBe(4047.5);
+  });
+
+  it('devolve o snapshot da peça, não o TBO nem o HS da aeronave', () => {
+    const snapshot = snapshotComponentCounters({ tsn: 4047.5, tso: 344.1, usadosHoras: 4047.5 });
+    const restored = countersAfterRetiradaRollback({
+      snapshot,
+      current: hsiPrMlp,
+      horasRetirada: 4047.5,
+    });
+    expect(restored.tso).toBeCloseTo(344.1, 1);
+    expect(restored.tsn).toBeCloseTo(4047.5, 1);
+    expect(restored.usadosHoras).toBeCloseTo(4047.5, 1);
+  });
+
+  it('TSO negativo do HSI (PR-MLP) vira 0 e o saldo não infla', () => {
+    expect(remainingHoursByControl({ tboHoras: 1500, tso: -0.1, tsn: 1500 })).toBe(1500);
+    expect(aircraftHoursAtDue(4047.5, 1500)).toBeCloseTo(5547.5, 1);
+  });
+
+  it('lê o snapshot gravado no metadata da movimentação', () => {
+    const counters = snapshotComponentCounters({ tsn: 4047.5, tso: 1.6, usadosHoras: 4047.5 });
+    expect(countersFromMovementMetadata({ pn: 'PT6A-12RF', counters })).toEqual(counters);
+    expect(countersFromMovementMetadata({ pn: 'PT6A-12RF' })).toBeNull();
   });
 });
 

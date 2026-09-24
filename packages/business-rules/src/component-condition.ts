@@ -1,3 +1,5 @@
+import { nonNegativeHours } from './component-counters';
+
 export type PieceCondition = 'NOVO' | 'USADO' | 'REVISADA';
 
 const NOVO_ALIASES = new Set(['NOVO', 'NOVA', 'NEW']);
@@ -85,7 +87,7 @@ export function hoursUsedForTbo(opts: {
   tso?: number | null;
   usadosHoras?: number | null;
 }): number {
-  if (opts.tsoNovo) return Number(opts.tsn ?? opts.usadosHoras ?? 0) || 0;
-  if (opts.tso != null) return Number(opts.tso) || 0;
-  return Number(opts.usadosHoras ?? opts.tsn ?? 0) || 0;
+  if (opts.tsoNovo) return nonNegativeHours(opts.tsn ?? opts.usadosHoras);
+  if (opts.tso != null) return nonNegativeHours(opts.tso);
+  return nonNegativeHours(opts.usadosHoras ?? opts.tsn);
 }
