@@ -266,6 +266,22 @@ describe('hour-control', () => {
     });
     expect(plan).toHaveLength(0);
   });
+
+  it('inspeção e documento com horas entram no voo; só calendário não', () => {
+    const plan = planMissingHourImpacts({
+      aircraftHours: 4047.5,
+      logs: [{ id: 'voo-30', horasDelta: 30, appliedTo: ['hsi', 'doc-horas'] }],
+      components: [
+        { id: 'hsi', tipo: 'INSPECAO', tsn: 4017.5, tboHoras: 1500, tso: 344.1 },
+        { id: 'doc-horas', tipo: 'DOCUMENTO', tsn: 4017.5, tlvHoras: 2000 },
+        { id: 'doc-cal', tipo: 'DOCUMENTO', horas: false },
+      ],
+    });
+    expect(plan.map((p) => p.componentId).sort()).toEqual(['doc-horas', 'hsi']);
+    const hsiSaldo = remainingHoursByControl({ tboHoras: 1500, tso: 374.1, tsn: 4047.5 });
+    expect(hsiSaldo).toBeCloseTo(1125.9, 1);
+    expect(aircraftHoursAtDue(4047.5, hsiSaldo)).toBeCloseTo(5173.4, 1);
+  });
 });
 
 describe('hour-log', () => {

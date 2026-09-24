@@ -13,6 +13,10 @@ export type ComponentForImpact = {
   id: string;
   tipo?: string | null;
   tsn?: number | null;
+  tso?: number | null;
+  tboHoras?: number | null;
+  tlvHoras?: number | null;
+  horas?: boolean | null;
   instalacao?: string | null;
 };
 
@@ -43,11 +47,18 @@ export function installedByFlightDate(instalacao: string | null | undefined, dat
   return inst <= flight;
 }
 
-function isHourMapRow(tipo: string | null | undefined): boolean {
-  const t = String(tipo ?? '')
-    .trim()
-    .toUpperCase();
-  return t !== 'DOCUMENTO' && t !== 'INSPECAO';
+/** Documento/inspeção entram se tiverem controle por horas (TBO, TLV, TSN ou TSO). */
+export function receivesHourImpact(comp: ComponentForImpact): boolean {
+  if (comp.horas === true) return true;
+  if (comp.horas === false && !(Number(comp.tboHoras) > 0) && !(Number(comp.tlvHoras) > 0)) {
+    return false;
+  }
+  return Boolean(
+    Number(comp.tboHoras) > 0 ||
+      Number(comp.tlvHoras) > 0 ||
+      Number(comp.tsn) > 0 ||
+      Number(comp.tso) > 0,
+  );
 }
 
 /** TSN ainda é o das horas da aeronave antes dos voos vigentes (espelho atrasado). */
@@ -75,7 +86,7 @@ export function planMissingHourImpacts(opts: {
     const applied = new Set((log.appliedTo ?? []).map(String));
 
     for (const comp of opts.components) {
-      if (!isHourMapRow(comp.tipo)) continue;
+      if (!receivesHourImpact(comp)) continue;
       if (!installedByFlightDate(comp.instalacao, log.dataVoo)) continue;
       const already = applied.has(String(comp.id));
       const behind = componentBehindAirframe(comp.tsn, opts.aircraftHours, flown);
