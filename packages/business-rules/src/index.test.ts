@@ -217,6 +217,18 @@ describe('document-status', () => {
       evaluateComponentStatus(
         {
           controlePor: 'HORAS',
+          limiteHoras: 1,
+          usadosHoras: 4047.5,
+          tsn: 4047.5,
+          controles: { calendario: true },
+        },
+        today,
+      ),
+    ).toBe('OK');
+    expect(
+      evaluateComponentStatus(
+        {
+          controlePor: 'HORAS',
           controles: { horas: false, calendario: true },
           dataValidade: '2026-08-29',
         },

@@ -63,6 +63,19 @@ function calendarStatus(
   return null;
 }
 
+function parseControles(value: ComponentControles | string | null | undefined): ComponentControles {
+  if (!value) return {};
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value) as ComponentControles;
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return value;
+}
+
 function flagOn(flag: boolean | undefined, inferred: boolean): boolean {
   if (flag === true) return true;
   if (flag === false) return false;
@@ -87,7 +100,12 @@ function hasExtendedLimits(component: ComponentLimits): boolean {
 }
 
 function evaluateLegacy(component: ComponentLimits, today: Date): ComponentStatus {
+  const flags = component.controles ?? {};
   const ctrl = normalizeControl(component.controlePor);
+
+  if (flags.horas === false || (flags.calendario === true && flags.horas !== true)) {
+    return calendarStatus(component.dataValidade, Number(component.alertDias ?? 0), today) ?? 'OK';
+  }
 
   if (ctrl === 'HORAS' && Number(component.limiteHoras ?? 0) > 0) {
     return restStatus(
@@ -114,11 +132,16 @@ export function evaluateComponentStatus(
   component: ComponentLimits,
   today = new Date(),
 ): ComponentStatus {
-  if (!hasExtendedLimits(component)) {
-    return evaluateLegacy(component, today);
+  const normalized: ComponentLimits = {
+    ...component,
+    controles: parseControles(component.controles as ComponentControles | string | null | undefined),
+  };
+  if (!hasExtendedLimits(normalized)) {
+    return evaluateLegacy(normalized, today);
   }
 
-  const ctrl = component.controles ?? {};
+  const ctrl = normalized.controles ?? {};
+  component = normalized;
   const statuses: ComponentStatus[] = [];
   const tsn = Number(component.tsn ?? component.usadosHoras ?? 0);
   const usedTbo = hoursUsedForTbo(component);
@@ -127,7 +150,9 @@ export function evaluateComponentStatus(
   const alertC = Number(component.alertCiclos ?? 0);
 
   const hasHourLimit =
-    positiveLimit(component.tlvHoras) || positiveLimit(component.tboHoras) || positiveLimit(component.limiteHoras);
+    positiveLimit(component.tlvHoras) ||
+    positiveLimit(component.tboHoras) ||
+    (ctrl.horas === true && positiveLimit(component.limiteHoras));
   const calInferred =
     normalizeControl(component.controlePor) === 'DATA' || Boolean(component.dataValidade);
   const hoursInferred =
