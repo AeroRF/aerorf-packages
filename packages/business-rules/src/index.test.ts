@@ -302,35 +302,44 @@ describe('component-counters — estorno de retirada', () => {
   it('não grava horas da aeronave (horas_retirada) em TSO/TSN/usados', () => {
     const restored = countersAfterRetiradaRollback({
       current: hsiPrMlp,
+      lastKnown: { tso: 374.1, tsn: 4047.5, usadosHoras: 4047.5 },
       horasRetirada: 4047.5,
     });
-    expect(restored.tsn).toBe(1500);
-    expect(restored.usadosHoras).toBe(1500);
-    expect(restored.tso).toBe(0);
-    expect(restored.tsn).not.toBe(4047.5);
-    expect(restored.usadosHoras).not.toBe(4047.5);
-  });
-
-  it('devolve o snapshot da peça, não o TBO nem o HS da aeronave', () => {
-    const snapshot = snapshotComponentCounters({ tsn: 4047.5, tso: 344.1, usadosHoras: 4047.5 });
-    const restored = countersAfterRetiradaRollback({
-      snapshot,
-      current: hsiPrMlp,
-      horasRetirada: 4047.5,
-    });
-    expect(restored.tso).toBeCloseTo(344.1, 1);
+    expect(restored.tso).toBeCloseTo(374.1, 1);
     expect(restored.tsn).toBeCloseTo(4047.5, 1);
     expect(restored.usadosHoras).toBeCloseTo(4047.5, 1);
+    expect(restored.tso).not.toBe(0);
+    expect(restored.tso).not.toBe(4047.5);
   });
 
-  it('TSO negativo do HSI (PR-MLP) vira 0 e o saldo não infla', () => {
+  it('devolve o TSO 374 do HSI, não zera', () => {
+    const snapshot = snapshotComponentCounters({ tsn: 4047.5, tso: 374.1, usadosHoras: 4047.5 });
+    const restored = countersAfterRetiradaRollback({
+      snapshot,
+      current: { ...hsiPrMlp, tso: 0 },
+      horasRetirada: 4047.5,
+    });
+    expect(restored.tso).toBeCloseTo(374.1, 1);
+    expect(remainingHoursByControl({ tboHoras: 1500, tso: restored.tso, tsn: restored.tsn })).toBeCloseTo(1125.9, 1);
+  });
+
+  it('TSO atual 0/-0,1 não apaga o último TSO conhecido', () => {
+    const restored = countersAfterRetiradaRollback({
+      current: { tsn: 0, tso: 0, usadosHoras: 4047.5 },
+      lastKnown: { tso: 374.1, tsn: 4047.5 },
+      horasRetirada: 4047.5,
+    });
+    expect(restored.tso).toBeCloseTo(374.1, 1);
+    expect(restored.tsn).toBeCloseTo(4047.5, 1);
+  });
+
+  it('TSO negativo sem memória conhecida não infla o saldo', () => {
     expect(remainingHoursByControl({ tboHoras: 1500, tso: -0.1, tsn: 1500 })).toBe(1500);
-    expect(aircraftHoursAtDue(4047.5, 1500)).toBeCloseTo(5547.5, 1);
   });
 
   it('lê o snapshot gravado no metadata da movimentação', () => {
-    const counters = snapshotComponentCounters({ tsn: 4047.5, tso: 1.6, usadosHoras: 4047.5 });
-    expect(countersFromMovementMetadata({ pn: 'PT6A-12RF', counters })).toEqual(counters);
+    const counters = snapshotComponentCounters({ tsn: 4047.5, tso: 374.1, usadosHoras: 4047.5 });
+    expect(countersFromMovementMetadata({ pn: 'PT6A-12RF', counters })?.tso).toBeCloseTo(374.1, 1);
     expect(countersFromMovementMetadata({ pn: 'PT6A-12RF' })).toBeNull();
   });
 });

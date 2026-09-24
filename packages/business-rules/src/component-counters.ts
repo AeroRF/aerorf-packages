@@ -9,68 +9,101 @@ export type ComponentLifeCounters = {
   usadosCiclos: number;
 };
 
-export function nonNegativeHours(value: number | null | undefined): number {
-  const n = Number(value ?? 0);
-  return Number.isFinite(n) && n > 0 ? n : 0;
-}
-
-function hasCounterValue(value: unknown): boolean {
-  return value != null && value !== '';
-}
-
-export function snapshotComponentCounters(input: {
+export type ComponentLifeInput = {
   tsn?: number | null;
   tso?: number | null;
   csn?: number | null;
   cso?: number | null;
   usadosHoras?: number | null;
   usadosCiclos?: number | null;
-}): ComponentLifeCounters {
-  const tsn = nonNegativeHours(input.tsn ?? input.usadosHoras);
-  const csn = nonNegativeHours(input.csn ?? input.usadosCiclos);
+};
+
+export function nonNegativeHours(value: number | null | undefined): number {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function finiteHours(value: unknown): number | null {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Primeiro valor > 0. Zero/negativo é lixo de estorno, não overhaul. */
+export function firstPositiveHours(...candidates: Array<number | null | undefined>): number | null {
+  for (const value of candidates) {
+    const n = finiteHours(value);
+    if (n != null && n > 0) return n;
+  }
+  return null;
+}
+
+export function snapshotComponentCounters(input: ComponentLifeInput): ComponentLifeCounters {
+  const tsn = firstPositiveHours(input.tsn, input.usadosHoras) ?? 0;
+  const csn = firstPositiveHours(input.csn, input.usadosCiclos) ?? 0;
   return {
     tsn,
-    tso: nonNegativeHours(input.tso),
+    tso: firstPositiveHours(input.tso) ?? 0,
     csn,
-    cso: nonNegativeHours(input.cso),
-    usadosHoras: nonNegativeHours(input.usadosHoras ?? input.tsn),
-    usadosCiclos: nonNegativeHours(input.usadosCiclos ?? input.csn),
+    cso: firstPositiveHours(input.cso) ?? 0,
+    usadosHoras: firstPositiveHours(input.usadosHoras, input.tsn) ?? tsn,
+    usadosCiclos: firstPositiveHours(input.usadosCiclos, input.csn) ?? csn,
   };
 }
 
 export function countersFromMovementMetadata(metadata: unknown): Partial<ComponentLifeCounters> | null {
   if (!metadata || typeof metadata !== 'object') return null;
-  const counters = (metadata as { counters?: unknown }).counters;
+  const rawMeta = metadata as { counters?: unknown; lastLife?: unknown };
+  const counters = rawMeta.counters ?? rawMeta.lastLife;
   if (!counters || typeof counters !== 'object') return null;
   const raw = counters as Record<string, unknown>;
   if (
-    !hasCounterValue(raw.tsn) &&
-    !hasCounterValue(raw.tso) &&
-    !hasCounterValue(raw.usadosHoras) &&
-    !hasCounterValue(raw.csn)
+    finiteHours(raw.tsn) == null &&
+    finiteHours(raw.tso) == null &&
+    finiteHours(raw.usadosHoras) == null &&
+    finiteHours(raw.csn) == null
   ) {
     return null;
   }
   return raw as Partial<ComponentLifeCounters>;
 }
 
+/** Nunca grava 0 por cima de um TSO conhecido (ex.: 374 h do HSI). */
+export function mergeLastLife(
+  previous: Partial<ComponentLifeCounters> | null | undefined,
+  next: ComponentLifeInput,
+): Partial<ComponentLifeCounters> {
+  return {
+    tsn: firstPositiveHours(next.tsn, previous?.tsn) ?? previous?.tsn,
+    tso: firstPositiveHours(next.tso, previous?.tso) ?? previous?.tso,
+    csn: firstPositiveHours(next.csn, previous?.csn) ?? previous?.csn,
+    cso: firstPositiveHours(next.cso, previous?.cso) ?? previous?.cso,
+    usadosHoras: firstPositiveHours(next.usadosHoras, previous?.usadosHoras) ?? previous?.usadosHoras,
+    usadosCiclos: firstPositiveHours(next.usadosCiclos, previous?.usadosCiclos) ?? previous?.usadosCiclos,
+  };
+}
+
 /** Estorno/cancelamento de retirada: devolve a vida da peça. Ignora horas da aeronave. */
 export function countersAfterRetiradaRollback(opts: {
   snapshot?: Partial<ComponentLifeCounters> | null;
-  current: {
-    tsn?: number | null;
-    tso?: number | null;
-    csn?: number | null;
-    cso?: number | null;
-    usadosHoras?: number | null;
-    usadosCiclos?: number | null;
-  };
+  lastKnown?: Partial<ComponentLifeCounters> | null;
+  current: ComponentLifeInput;
   horasRetirada?: number | null;
 }): ComponentLifeCounters {
   void opts.horasRetirada;
-  const snapshot = opts.snapshot;
-  if (snapshot && countersFromMovementMetadata({ counters: snapshot })) {
-    return snapshotComponentCounters({ ...opts.current, ...snapshot });
-  }
-  return snapshotComponentCounters(opts.current);
+  const snap = opts.snapshot;
+  const known = opts.lastKnown;
+  const cur = opts.current;
+  const tsn = firstPositiveHours(snap?.tsn, known?.tsn, cur.tsn, cur.usadosHoras) ?? 0;
+  const tso = firstPositiveHours(snap?.tso, known?.tso, cur.tso) ?? 0;
+  const csn = firstPositiveHours(snap?.csn, known?.csn, cur.csn, cur.usadosCiclos) ?? 0;
+  const cso = firstPositiveHours(snap?.cso, known?.cso, cur.cso) ?? 0;
+  return {
+    tsn,
+    tso,
+    csn,
+    cso,
+    usadosHoras: firstPositiveHours(snap?.usadosHoras, known?.usadosHoras, cur.usadosHoras, tsn) ?? tsn,
+    usadosCiclos: firstPositiveHours(snap?.usadosCiclos, known?.usadosCiclos, cur.usadosCiclos, csn) ?? csn,
+  };
 }
